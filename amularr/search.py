@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 
 PROGRESS_DONE = 100
 PROGRESS_IDLE = 0xFFFF
+FIRST_SEEN_RETENTION = 30 * 86400  # seconds a hash keeps its first-seen date
 
 
 @dataclass
@@ -35,6 +36,7 @@ class SearchService:
         self._lock = threading.Lock()
         self._cache: dict[tuple[str, str, int], _CacheEntry] = {}
         self._known: dict[str, SearchResult] = {}  # ed2k hash -> last seen result
+        self._first_seen: dict[str, float] = {}  # ed2k hash -> epoch seconds of the first sighting
         self._known_lock = threading.Lock()
 
     # ------------------------------------------------------------------
@@ -54,14 +56,28 @@ class SearchService:
             results = self._run(text, file_type, min_size)
             self._cache[key] = _CacheEntry(time.monotonic(), results)
             self._prune_cache()
+        self._remember(results)
+        return results
+
+    def _remember(self, results: list[SearchResult]) -> None:
+        now = time.time()
         with self._known_lock:
             for result in results:
                 self._known[result.hash] = result
-        return results
+                self._first_seen.setdefault(result.hash, now)
+            if len(self._first_seen) > 20000:
+                for key in [k for k, t in self._first_seen.items() if now - t > FIRST_SEEN_RETENTION]:
+                    del self._first_seen[key]
 
     def find_known(self, ed2k_hash: str) -> SearchResult | None:
         with self._known_lock:
             return self._known.get(ed2k_hash.upper())
+
+    def first_seen(self, ed2k_hash: str) -> float | None:
+        """Epoch seconds of the first time a hash showed up in a search;
+        used as the feed's pubDate so RSS consumers see a stable date."""
+        with self._known_lock:
+            return self._first_seen.get(ed2k_hash.upper())
 
     def recent(self) -> list[SearchResult]:
         """Union of every cached result, newest searches first."""

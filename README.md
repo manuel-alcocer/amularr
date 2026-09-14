@@ -65,6 +65,31 @@ Environment variables:
 | `AMULARR_STATE_FILE` | `/data/amularr-state.json` | Persistent state |
 | `AMULARR_QBT_USERNAME` / `AMULARR_QBT_PASSWORD` | | Optional credentials for the qBittorrent facade |
 | `AMULARR_LOG_LEVEL` | `INFO` | Logging level |
+| `AMULARR_SONARR_URL` / `AMULARR_SONARR_API_KEY` | | Enable wanted-list searches for Sonarr (see below) |
+| `AMULARR_RADARR_URL` / `AMULARR_RADARR_API_KEY` | | Enable wanted-list searches for Radarr |
+| `AMULARR_WANTED_DAYS` | `7` | Only search items aired/released (or added) within this many days |
+| `AMULARR_WANTED_INTERVAL` | `900` | Seconds between two reads of the wanted lists |
+| `AMULARR_WANTED_RESEARCH_INTERVAL` | `21600` | Seconds before a still-wanted item is searched again |
+| `AMULARR_WANTED_MAX_SEARCHES` | `30` | Keyword searches per refresh (each takes `AMULARR_SEARCH_TIMEOUT` at most) |
+| `AMULARR_WANTED_MAX_TITLES` | `3` | Titles tried per item (main title plus alternate/scene titles) |
+| `AMULARR_WANTED_TITLE_LANGUAGES` | `spanish` | Radarr alternate-title languages to search with |
+
+### Wanted-list searches (automatic grabs)
+
+ed2k/Kad has no "recent releases" feed, so a plain RSS sync can never
+discover a new episode: Sonarr and Radarr only grab automatically what
+shows up in the feed, and they do not run missing-episode searches on a
+schedule. When `AMULARR_SONARR_URL`/`AMULARR_SONARR_API_KEY` (and/or the
+Radarr pair) are set, every RSS request from the *arr apps makes amularr
+read their *Wanted → Missing* lists in the background, run the same
+keyword searches Sonarr/Radarr would (`Show S01E05`, `Show 1x05`, with
+the scene/alternate titles; `Movie 2022` with the selected alternate
+titles) and keep the hits in the feed until the item is no longer
+wanted. The next RSS sync (15 minutes by default) then grabs them.
+
+Items are searched again every `AMULARR_WANTED_RESEARCH_INTERVAL`
+seconds while they stay wanted, so a release that appears on the network
+a day after airing is still picked up.
 
 ## Running
 
@@ -78,7 +103,7 @@ Or with the container image:
 ```bash
 docker run -p 8080:8080 -v amularr-data:/data -v /path/to/incoming:/amule/incoming \
   -e AMULE_EC_HOST=192.168.1.12 -e AMULE_EC_PASSWORD=secret -e AMULARR_INCOMING_DIR=/amule/incoming \
-  registry.k.alcocer.net/amularr:0.1.1
+  registry.k.alcocer.net/amularr:0.2.0
 ```
 
 ### Prowlarr

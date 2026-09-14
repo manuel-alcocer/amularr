@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "amularr"
-version = "0.1.1"
+version = "0.2.0"
 description = "Torznab indexer and download-client bridge between the *arr stack and aMule (ed2k/Kad)"
 readme = "README.md"
 requires-python = ">=3.11"

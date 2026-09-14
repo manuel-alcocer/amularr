@@ -20,6 +20,7 @@ from .config import Config
 from .ec import SearchResult
 from .search import SearchService
 from .state import ed2k_to_btih
+from .wanted import SOURCE_MOVIES, SOURCE_TV, WantedSearcher
 from .web import Response
 
 log = logging.getLogger(__name__)
@@ -132,6 +133,7 @@ class Item:
     result: SearchResult
     parent: int
     sub: int
+    seen: float | None = None  # epoch seconds of the first sighting (feed pubDate)
 
 
 # ----------------------------------------------------------------------
@@ -180,7 +182,7 @@ def results_xml(items: list[Item], config: Config, offset: int, total: int) -> b
         ET.SubElement(node, "title").text = r.name
         ET.SubElement(node, "guid", isPermaLink="false").text = r.ed2k_link
         ET.SubElement(node, "link").text = magnet
-        ET.SubElement(node, "pubDate").text = now
+        ET.SubElement(node, "pubDate").text = formatdate(item.seen, usegmt=True) if item.seen else now
         ET.SubElement(node, "size").text = str(r.size)
         ET.SubElement(node, "category").text = str(item.sub)
         ET.SubElement(node, "enclosure", url=magnet, length=str(r.size), type="application/x-bittorrent")
@@ -207,9 +209,10 @@ def results_xml(items: list[Item], config: Config, offset: int, total: int) -> b
 
 
 class TorznabAPI:
-    def __init__(self, search: SearchService, config: Config):
+    def __init__(self, search: SearchService, config: Config, wanted: WantedSearcher | None = None):
         self.search = search
         self.config = config
+        self.wanted = wanted or WantedSearcher(search, config)
 
     def handle(self, params: dict[str, str]) -> Response:
         cfg = self.config
@@ -232,9 +235,14 @@ class TorznabAPI:
             file_type = cfg.file_type if domain in (DOMAIN_TV, DOMAIN_MOVIES, "auto") else ""
             results = self._run_queries(queries, file_type)
         else:
-            # RSS-style request without keywords: serve what we recently saw,
-            # or run the configured feed query so the feed is never empty.
-            results = self.search.recent()
+            # RSS-style request without keywords. ed2k has no "what's new",
+            # so serve what the wanted-list searcher found for the *arr apps
+            # (kicking a refresh in the background), then whatever was
+            # searched recently, or the configured feed query so the feed is
+            # never empty.
+            sources = {DOMAIN_TV: [SOURCE_TV], DOMAIN_MOVIES: [SOURCE_MOVIES]}.get(domain)
+            self.wanted.maybe_refresh(sources)
+            results = self._merge(self.wanted.results(sources), self.search.recent())
             if not results and cfg.rss_query:
                 file_type = cfg.file_type if domain in (DOMAIN_TV, DOMAIN_MOVIES, "auto") else ""
                 results = self.search.search(cfg.rss_query, file_type=file_type)
@@ -247,9 +255,14 @@ class TorznabAPI:
         return Response.xml(results_xml(page, cfg, offset, total))
 
     def _run_queries(self, queries: list[str], file_type: str) -> list[SearchResult]:
+        return self._merge(*(self.search.search(query, file_type=file_type) for query in queries))
+
+    @staticmethod
+    def _merge(*result_sets: list[SearchResult]) -> list[SearchResult]:
+        """Union by ed2k hash, keeping the sighting with most sources."""
         merged: dict[str, SearchResult] = {}
-        for query in queries:
-            for result in self.search.search(query, file_type=file_type):
+        for results in result_sets:
+            for result in results:
                 current = merged.get(result.hash)
                 if current is None or result.sources > current.sources:
                     merged[result.hash] = result
@@ -271,7 +284,7 @@ class TorznabAPI:
             parent, sub = classify(r.name, domain)
             if not cat_allowed(parent, sub, cats):
                 continue
-            items.append(Item(r, parent, sub))
+            items.append(Item(r, parent, sub, self.search.first_seen(r.hash)))
         return items
 
 

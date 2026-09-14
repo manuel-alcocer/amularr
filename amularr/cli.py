@@ -14,6 +14,7 @@ from .qbittorrent import QBittorrentAPI
 from .search import SearchService
 from .state import State
 from .torznab import TorznabAPI
+from .wanted import WantedSearcher
 
 
 def build_bridge(config: Config) -> Bridge:
@@ -27,7 +28,8 @@ def build_bridge(config: Config) -> Bridge:
     )
     state = State(config.state_file)
     search = SearchService(ec, config)
-    torznab = TorznabAPI(search, config)
+    wanted = WantedSearcher(search, config)
+    torznab = TorznabAPI(search, config, wanted)
     qbittorrent = QBittorrentAPI(ec, state, search, config)
     return Bridge(config, ec, torznab, qbittorrent)
 
@@ -59,6 +61,10 @@ def main(argv: list[str] | None = None) -> int:
 
     server = Server(bridge)
     log.info("amularr %s listening on %s:%d", __version__, config.listen_host, config.listen_port)
+    if bridge.torznab.wanted.sources():
+        log.info("wanted-list searches enabled for: %s", ", ".join(bridge.torznab.wanted.sources()))
+    else:
+        log.info("wanted-list searches disabled (set AMULARR_SONARR_URL/API_KEY or AMULARR_RADARR_URL/API_KEY)")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

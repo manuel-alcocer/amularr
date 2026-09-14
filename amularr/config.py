@@ -69,6 +69,21 @@ class Config:
     # feed is empty.
     rss_query: str = "1080p"
 
+    # Wanted-list searches (see wanted.py): ask Sonarr/Radarr what they are
+    # missing and search aMule for it in the background, so the RSS feed can
+    # surface new episodes/movies without a manual search.
+    sonarr_url: str | None = None
+    sonarr_api_key: str | None = None
+    radarr_url: str | None = None
+    radarr_api_key: str | None = None
+    wanted_days: int = 7  # only items aired/released this many days ago at most
+    wanted_interval: float = 900.0  # seconds between two reads of the wanted lists
+    wanted_research_interval: float = 21600.0  # seconds before a wanted item is searched again
+    wanted_max_searches: int = 30  # keyword searches per refresh
+    wanted_max_titles: int = 3  # titles (main + alternate) tried per item
+    wanted_page_size: int = 200
+    wanted_title_languages: list[str] = field(default_factory=lambda: ["spanish"])
+
     # qBittorrent emulation
     qbt_username: str | None = None
     qbt_password: str | None = None
@@ -89,6 +104,7 @@ class Config:
         if search_type not in SEARCH_TYPES:
             raise ValueError(f"AMULARR_SEARCH_TYPE must be one of {', '.join(SEARCH_TYPES)}")
         extensions = _env("AMULARR_VIDEO_EXTENSIONS")
+        languages = _env("AMULARR_WANTED_TITLE_LANGUAGES")
         cfg = cls(
             ec_host=_env("AMULE_EC_HOST", "127.0.0.1"),
             ec_port=_env_int("AMULE_EC_PORT", 4712),
@@ -108,6 +124,17 @@ class Config:
             file_type=_env("AMULARR_FILE_TYPE", "Video"),
             indexer_name=_env("AMULARR_INDEXER_NAME", "amularr"),
             rss_query=_env("AMULARR_RSS_QUERY", "1080p"),
+            sonarr_url=_env("AMULARR_SONARR_URL"),
+            sonarr_api_key=_env("AMULARR_SONARR_API_KEY"),
+            radarr_url=_env("AMULARR_RADARR_URL"),
+            radarr_api_key=_env("AMULARR_RADARR_API_KEY"),
+            wanted_days=_env_int("AMULARR_WANTED_DAYS", 7),
+            wanted_interval=_env_float("AMULARR_WANTED_INTERVAL", 900.0),
+            wanted_research_interval=_env_float("AMULARR_WANTED_RESEARCH_INTERVAL", 21600.0),
+            wanted_max_searches=_env_int("AMULARR_WANTED_MAX_SEARCHES", 30),
+            wanted_max_titles=_env_int("AMULARR_WANTED_MAX_TITLES", 3),
+            wanted_page_size=_env_int("AMULARR_WANTED_PAGE_SIZE", 200),
+            wanted_title_languages=languages.replace(",", " ").split() if languages else ["spanish"],
             qbt_username=_env("AMULARR_QBT_USERNAME"),
             qbt_password=_env("AMULARR_QBT_PASSWORD"),
             incoming_dir=_env("AMULARR_INCOMING_DIR"),
