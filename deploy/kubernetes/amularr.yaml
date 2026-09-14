@@ -1,0 +1,157 @@
+# amularr on Kubernetes: Secret, PVC for the state file, Deployment, Service.
+# Adjust the namespace, the aMule host, the Incoming volume and the storage
+# class, then `kubectl apply -f amularr.yaml`. See docs/install-kubernetes.md.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: amularr
+  namespace: media
+type: Opaque
+stringData:
+  # The Password= line of ~/.aMule/remote.conf (MD5 of the EC password), or
+  # use AMULE_EC_PASSWORD with the clear-text password instead.
+  ec_password_md5: "00000000000000000000000000000000"
+  # Optional: Sonarr/Radarr API keys (Settings -> General) so amularr searches
+  # aMule for their wanted lists in the background.
+  sonarr_api_key: ""
+  radarr_api_key: ""
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: amularr-state
+  namespace: media
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amularr
+  namespace: media
+  labels:
+    app: amularr
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # the state file must not be shared by two pods
+  selector:
+    matchLabels:
+      app: amularr
+  template:
+    metadata:
+      labels:
+        app: amularr
+    spec:
+      # Same uid/gid as the *arr containers so files it deletes in the
+      # Incoming directory (after an import) are its own.
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 100
+        fsGroup: 100
+        runAsNonRoot: true
+      containers:
+        - name: amularr
+          image: ghcr.io/manuel-alcocer/amularr:0.2.0
+          env:
+            - name: TZ
+              value: Europe/Madrid
+            - name: AMULE_EC_HOST
+              value: amule.media.svc # or the NAS IP where aMule runs
+            - name: AMULE_EC_PORT
+              value: "4712"
+            - name: AMULE_EC_PASSWORD_MD5
+              valueFrom:
+                secretKeyRef:
+                  name: amularr
+                  key: ec_password_md5
+            - name: AMULARR_INCOMING_DIR
+              value: /amule/incoming # as Sonarr/Radarr see it
+            - name: AMULARR_LOCAL_INCOMING_DIR
+              value: /amule/incoming # as amularr sees it
+            - name: AMULARR_STATE_FILE
+              value: /data/amularr-state.json
+            - name: AMULARR_SEARCH_TYPE
+              value: global
+            - name: AMULARR_SEARCH_TIMEOUT
+              value: "25"
+            - name: AMULARR_MIN_SOURCES
+              value: "1"
+            # Optional wanted-list searches (see docs/usage.md).
+            - name: AMULARR_SONARR_URL
+              value: http://sonarr:8989
+            - name: AMULARR_SONARR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: amularr
+                  key: sonarr_api_key
+                  optional: true
+            - name: AMULARR_RADARR_URL
+              value: http://radarr:7878
+            - name: AMULARR_RADARR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: amularr
+                  key: radarr_api_key
+                  optional: true
+            - name: AMULARR_LOG_LEVEL
+              value: INFO
+          ports:
+            - name: http
+              containerPort: 8080
+          # /ping never touches aMule; /health does (503 while the EC link is
+          # down) and only gates readiness, so an aMule restart does not
+          # restart the pod in a loop.
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: state
+              mountPath: /data
+            - name: amule-incoming
+              mountPath: /amule/incoming
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: amularr-state
+        # aMule's Incoming directory. Mount the same volume at the same path
+        # in Sonarr and Radarr, or add a remote path mapping there.
+        - name: amule-incoming
+          nfs:
+            server: 192.168.1.12
+            path: /export/amule-incoming
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: amularr
+  namespace: media
+  labels:
+    app: amularr
+spec:
+  selector:
+    app: amularr
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

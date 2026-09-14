@@ -1,0 +1,77 @@
+# amularr next to an existing aMule. Copy this file, adjust the paths and
+# passwords, then `docker compose up -d`. See docs/install-docker.md.
+#
+# The *arr apps must see aMule's Incoming directory at the same path as
+# AMULARR_INCOMING_DIR (here /amule/incoming), or you need a remote path
+# mapping in Sonarr/Radarr.
+
+services:
+  amularr:
+    image: ghcr.io/manuel-alcocer/amularr:0.2.0
+    container_name: amularr
+    restart: unless-stopped
+    user: "1000:100" # same uid/gid as your *arr containers, so it can delete imported files
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Europe/Madrid
+      # --- aMule External Connections -------------------------------------
+      AMULE_EC_HOST: amule # hostname/IP of the aMule daemon
+      AMULE_EC_PORT: "4712"
+      AMULE_EC_PASSWORD: change-me # or AMULE_EC_PASSWORD_MD5 (the Password= line of remote.conf)
+      # --- paths -----------------------------------------------------------
+      AMULARR_INCOMING_DIR: /amule/incoming # as Sonarr/Radarr see it
+      AMULARR_LOCAL_INCOMING_DIR: /amule/incoming # as amularr sees it
+      AMULARR_STATE_FILE: /data/amularr-state.json
+      # --- searches ---------------------------------------------------------
+      AMULARR_SEARCH_TYPE: global # global | local | kad
+      AMULARR_SEARCH_TIMEOUT: "25"
+      AMULARR_MIN_SOURCES: "1"
+      # --- optional: search aMule for what Sonarr/Radarr are missing -------
+      # AMULARR_SONARR_URL: http://sonarr:8989
+      # AMULARR_SONARR_API_KEY: ""
+      # AMULARR_RADARR_URL: http://radarr:7878
+      # AMULARR_RADARR_API_KEY: ""
+      # --- optional: protect the two facades --------------------------------
+      # AMULARR_API_KEY: ""      # Torznab apikey
+      # AMULARR_QBT_USERNAME: "" # qBittorrent facade login
+      # AMULARR_QBT_PASSWORD: ""
+      AMULARR_LOG_LEVEL: INFO
+    volumes:
+      - amularr-data:/data
+      - /path/to/amule/incoming:/amule/incoming
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/ping', timeout=4).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+
+  # Optional: an aMule daemon in the same stack. Remove it if aMule already
+  # runs elsewhere (a NAS, another host) and point AMULE_EC_HOST at it.
+  amule:
+    image: ngosang/amule:latest
+    container_name: amule
+    restart: unless-stopped
+    profiles: ["with-amule"]
+    environment:
+      PUID: "1000"
+      PGID: "100"
+      TZ: Europe/Madrid
+      GUI_PWD: change-me-web
+      WEBUI_PWD: change-me-web
+      MOD_AUTO_RESTART_ENABLED: "true"
+      MOD_AUTO_SHARE_ENABLED: "false"
+    ports:
+      - "4711:4711" # web UI
+      - "4712:4712" # EC (amularr talks to this one)
+      - "4662:4662" # ed2k TCP
+      - "4665:4665/udp"
+      - "4672:4672/udp"
+    volumes:
+      - amule-config:/home/amule/.aMule
+      - /path/to/amule/incoming:/incoming
+      - /path/to/amule/temp:/temp
+
+volumes:
+  amularr-data:
+  amule-config:

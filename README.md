@@ -65,7 +65,7 @@ Environment variables:
 | `AMULARR_STATE_FILE` | `/data/amularr-state.json` | Persistent state |
 | `AMULARR_QBT_USERNAME` / `AMULARR_QBT_PASSWORD` | | Optional credentials for the qBittorrent facade |
 | `AMULARR_LOG_LEVEL` | `INFO` | Logging level |
-| `AMULARR_SONARR_URL` / `AMULARR_SONARR_API_KEY` | | Enable wanted-list searches for Sonarr (see below) |
+| `AMULARR_SONARR_URL` / `AMULARR_SONARR_API_KEY` | | Enable wanted-list searches for Sonarr (see [docs/usage.md](docs/usage.md)) |
 | `AMULARR_RADARR_URL` / `AMULARR_RADARR_API_KEY` | | Enable wanted-list searches for Radarr |
 | `AMULARR_WANTED_DAYS` | `7` | Only search items aired/released (or added) within this many days |
 | `AMULARR_WANTED_INTERVAL` | `900` | Seconds between two reads of the wanted lists |
@@ -74,49 +74,34 @@ Environment variables:
 | `AMULARR_WANTED_MAX_TITLES` | `3` | Titles tried per item (main title plus alternate/scene titles) |
 | `AMULARR_WANTED_TITLE_LANGUAGES` | `spanish` | Radarr alternate-title languages to search with |
 
-### Wanted-list searches (automatic grabs)
+See [docs/usage.md](docs/usage.md#4-wanted-list-searches-automatic-grabs) for how the wanted-list searches make automatic grabs work.
 
-ed2k/Kad has no "recent releases" feed, so a plain RSS sync can never
-discover a new episode: Sonarr and Radarr only grab automatically what
-shows up in the feed, and they do not run missing-episode searches on a
-schedule. When `AMULARR_SONARR_URL`/`AMULARR_SONARR_API_KEY` (and/or the
-Radarr pair) are set, every RSS request from the *arr apps makes amularr
-read their *Wanted → Missing* lists in the background, run the same
-keyword searches Sonarr/Radarr would (`Show S01E05`, `Show 1x05`, with
-the scene/alternate titles; `Movie 2022` with the selected alternate
-titles) and keep the hits in the feed until the item is no longer
-wanted. The next RSS sync (15 minutes by default) then grabs them.
+## Installation
 
-Items are searched again every `AMULARR_WANTED_RESEARCH_INTERVAL`
-seconds while they stay wanted, so a release that appears on the network
-a day after airing is still picked up.
+Images for `linux/amd64` and `linux/arm64` are published at
+`ghcr.io/manuel-alcocer/amularr` (`0.2.0`, `0.2`, `latest`, and `main` for the
+development branch).
 
-## Running
+- **Docker / docker compose**: [docs/install-docker.md](docs/install-docker.md),
+  example stack in [deploy/docker-compose.yml](deploy/docker-compose.yml).
+- **Kubernetes**: [docs/install-kubernetes.md](docs/install-kubernetes.md),
+  manifest in [deploy/kubernetes/amularr.yaml](deploy/kubernetes/amularr.yaml).
+- **Wiring Prowlarr, Sonarr and Radarr**, routing, wanted-list searches and
+  troubleshooting: [docs/usage.md](docs/usage.md).
+
+Quick start with an aMule already running on `192.168.1.12`:
 
 ```bash
-pip install .
-AMULE_EC_HOST=192.168.1.12 AMULE_EC_PASSWORD=secret AMULARR_INCOMING_DIR=/amule/incoming amularr
+docker run -d --name amularr -p 8080:8080 --user 1000:100 \
+  -e AMULE_EC_HOST=192.168.1.12 -e AMULE_EC_PASSWORD=secret \
+  -e AMULARR_INCOMING_DIR=/amule/incoming \
+  -v amularr-data:/data -v /srv/amule/incoming:/amule/incoming \
+  ghcr.io/manuel-alcocer/amularr:0.2.0
 ```
 
-Or with the container image:
-
-```bash
-docker run -p 8080:8080 -v amularr-data:/data -v /path/to/incoming:/amule/incoming \
-  -e AMULE_EC_HOST=192.168.1.12 -e AMULE_EC_PASSWORD=secret -e AMULARR_INCOMING_DIR=/amule/incoming \
-  registry.k.alcocer.net/amularr:0.2.0
-```
-
-### Prowlarr
-
-Indexers → Add → *Generic Torznab*. URL `http://amularr:8080`, API path
-`/api`, API key as configured (or empty). Categories: TV and Movies.
-
-### Sonarr / Radarr
-
-Download Clients → Add → *qBittorrent*. Host `amularr`, port `8080`, no
-credentials unless configured, category `tv-sonarr` / `radarr`. Mount
-aMule's Incoming directory in the Sonarr/Radarr container at the same path
-you pass in `AMULARR_INCOMING_DIR` (or add a remote path mapping).
+Then add `http://amularr:8080` as a *Generic Torznab* indexer in Prowlarr
+and as a *qBittorrent* download client in Sonarr/Radarr, and set the
+indexer's *Download Client* to it.
 
 ## Development
 
@@ -124,6 +109,26 @@ you pass in `AMULARR_INCOMING_DIR` (or add a remote path mapping).
 pip install -e .[dev]
 pytest
 ```
+
+Local multi-arch build:
+
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/manuel-alcocer/amularr:dev .
+```
+
+### Releasing
+
+The GitHub Actions workflow in `.github/workflows/build.yml` runs the tests
+on every push and pull request, builds the image for `linux/amd64` and
+`linux/arm64`, and pushes it to GHCR on pushes to `main` (tag `main`) and on
+tags `v*` (tags `X.Y.Z`, `X.Y`, `latest`). A release is:
+
+```bash
+# bump version in pyproject.toml and amularr/__init__.py, commit, then
+git tag v0.2.0 && git push origin main v0.2.0
+```
+
+The workflow refuses a tag that does not match `amularr.__version__`.
 
 `amularr/ec/` is a standalone implementation of the EC protocol (packet
 framing, UTF-8 numbers, zlib, salted MD5 handshake) that can be reused for
