@@ -1,6 +1,6 @@
 # Uso: alta en Prowlarr, Sonarr y Radarr
 
-*[English](../usage.md) · Español*
+*[English](en/usage.md) · Español*
 
 amularr expone dos fachadas en un mismo puerto:
 

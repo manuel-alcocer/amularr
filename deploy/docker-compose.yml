@@ -1,5 +1,5 @@
 # amularr next to an existing aMule. Copy this file, adjust the paths and
-# passwords, then `docker compose up -d`. See docs/install-docker.md.
+# passwords, then `docker compose up -d`. See docs/en/install-docker.md.
 #
 # The *arr apps must see aMule's Incoming directory at the same path as
 # AMULARR_INCOMING_DIR (here /amule/incoming), or you need a remote path

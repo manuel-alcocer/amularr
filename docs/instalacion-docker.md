@@ -1,6 +1,6 @@
 # Instalación con Docker
 
-*[English](../install-docker.md) · Español*
+*[English](en/install-docker.md) · Español*
 
 amularr es un único contenedor casi sin estado (un pequeño fichero JSON).
 Necesita acceso de red a un demonio aMule y ver el directorio Incoming de

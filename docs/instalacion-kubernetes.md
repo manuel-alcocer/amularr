@@ -1,6 +1,6 @@
 # Instalación en Kubernetes
 
-*[English](../install-kubernetes.md) · Español*
+*[English](en/install-kubernetes.md) · Español*
 
 `deploy/kubernetes/amularr.yaml` contiene un ejemplo completo: un Secret con
 la contraseña EC, un PVC de 100 Mi para el fichero de estado, el Deployment y

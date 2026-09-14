@@ -1,6 +1,6 @@
 # Installing with Docker
 
-*English · [Español](es/instalacion-docker.md)*
+*[Español](../instalacion-docker.md) · English*
 
 amularr is a single stateless-ish container (one small JSON state file). It
 needs network access to an aMule daemon and a view of aMule's Incoming

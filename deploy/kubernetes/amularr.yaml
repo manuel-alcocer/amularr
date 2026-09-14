@@ -1,6 +1,6 @@
 # amularr on Kubernetes: Secret, PVC for the state file, Deployment, Service.
 # Adjust the namespace, the aMule host, the Incoming volume and the storage
-# class, then `kubectl apply -f amularr.yaml`. See docs/install-kubernetes.md.
+# class, then `kubectl apply -f amularr.yaml`. See docs/en/install-kubernetes.md.
 apiVersion: v1
 kind: Secret
 metadata:
@@ -80,7 +80,7 @@ spec:
               value: "25"
             - name: AMULARR_MIN_SOURCES
               value: "1"
-            # Optional wanted-list searches (see docs/usage.md).
+            # Optional wanted-list searches (see docs/en/usage.md).
             - name: AMULARR_SONARR_URL
               value: http://sonarr:8989
             - name: AMULARR_SONARR_API_KEY
