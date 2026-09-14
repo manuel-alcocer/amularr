@@ -1,5 +1,7 @@
 # amularr
 
+*English · [Español](README.es.md)*
+
 Bridge between the *arr stack (Prowlarr, Sonarr, Radarr) and aMule.
 
 It speaks aMule's External Connections (EC) protocol natively (no

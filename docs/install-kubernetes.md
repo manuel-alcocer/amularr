@@ -1,5 +1,7 @@
 # Installing on Kubernetes
 
+*English · [Español](es/instalacion-kubernetes.md)*
+
 `deploy/kubernetes/amularr.yaml` holds a complete example: a Secret with the
 EC password, a 100 Mi PVC for the state file, the Deployment and a
 ClusterIP Service. It assumes aMule already runs somewhere reachable (a NAS,

@@ -1,5 +1,7 @@
 # Usage: wiring Prowlarr, Sonarr and Radarr
 
+*English · [Español](es/uso.md)*
+
 amularr exposes two facades on one port:
 
 | Path | Speaks | Registered in |
