@@ -2,6 +2,10 @@
 
 *[English](README.en.md) · Español*
 
+<p align="center">
+  <img src="docs/img/amularr.svg" alt="amularr: Prowlarr, Sonarr y Radarr a un lado, aMule al otro; amularr en medio como indexer Torznab y cliente qBittorrent, hablando EC con aMule; el fichero terminado vuelve por el directorio Incoming" width="860">
+</p>
+
 Puente entre el stack *arr (Prowlarr, Sonarr, Radarr) y aMule.
 
 Habla el protocolo External Connections (EC) de aMule de forma nativa (sin
