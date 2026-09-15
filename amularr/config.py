@@ -68,6 +68,13 @@ class Config:
     # has been searched recently; Prowlarr rejects an indexer whose test
     # feed is empty.
     rss_query: str = "1080p"
+    # Torznab volume factors sent with every result. Sonarr/Radarr turn them
+    # into indexer flags (0.25 -> "Freeleech75", 2 -> "DoubleUpload") and a
+    # custom format on that flag is the only way to score amularr releases
+    # above the torrent ones; public torrent trackers report 0 ("Freeleech")
+    # and 1, so 0.25 tells amularr apart from them.
+    download_volume_factor: str = "0.25"
+    upload_volume_factor: str = "1"
 
     # Wanted-list searches (see wanted.py): ask Sonarr/Radarr what they are
     # missing and search aMule for it in the background, so the RSS feed can
@@ -124,6 +131,8 @@ class Config:
             file_type=_env("AMULARR_FILE_TYPE", "Video"),
             indexer_name=_env("AMULARR_INDEXER_NAME", "amularr"),
             rss_query=_env("AMULARR_RSS_QUERY", "1080p"),
+            download_volume_factor=_env("AMULARR_DOWNLOAD_VOLUME_FACTOR", "0.25"),
+            upload_volume_factor=_env("AMULARR_UPLOAD_VOLUME_FACTOR", "1"),
             sonarr_url=_env("AMULARR_SONARR_URL"),
             sonarr_api_key=_env("AMULARR_SONARR_API_KEY"),
             radarr_url=_env("AMULARR_RADARR_URL"),

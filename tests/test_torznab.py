@@ -89,6 +89,18 @@ def test_rss_request_without_query_returns_recent_results():
     assert len(ec.searches) == 1  # "Some Movie" only; the rss call ran no search
 
 
+def test_results_carry_volume_factors_for_indexer_flags():
+    api, _ = make_api([make_result(H1, "Some.Movie.2020.1080p.mkv", 10)])
+    root = ET.fromstring(api.handle({"t": "movie", "q": "Some Movie"}).body)
+    attrs = {a.get("name"): a.get("value") for a in root.findall("channel/item/torznab:attr", NS)}
+    assert attrs["downloadvolumefactor"] == "0.25"  # Sonarr/Radarr flag "Freeleech75"
+    assert attrs["uploadvolumefactor"] == "1"
+    api, _ = make_api([make_result(H1, "Some.Movie.2020.1080p.mkv", 10)], download_volume_factor="0", upload_volume_factor="2")
+    root = ET.fromstring(api.handle({"t": "movie", "q": "Some Movie"}).body)
+    attrs = {a.get("name"): a.get("value") for a in root.findall("channel/item/torznab:attr", NS)}
+    assert (attrs["downloadvolumefactor"], attrs["uploadvolumefactor"]) == ("0", "2")
+
+
 def test_rss_request_with_empty_cache_runs_feed_query():
     api, ec = make_api([make_result(H1, "Some.Movie.2020.1080p.mkv", 10)])
     resp = api.handle({"t": "search", "extended": "1"})

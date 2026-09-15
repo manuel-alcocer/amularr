@@ -64,6 +64,7 @@ Environment variables:
 | `AMULARR_MIN_SOURCES` | `1` | Drop results with fewer sources |
 | `AMULARR_MAX_RESULTS` | `200` | Torznab page size cap |
 | `AMULARR_RSS_QUERY` | `1080p` | Keyword search answering RSS requests (no `q`) when nothing was searched recently |
+| `AMULARR_DOWNLOAD_VOLUME_FACTOR` / `AMULARR_UPLOAD_VOLUME_FACTOR` | `0.25` / `1` | Torznab factors Sonarr/Radarr turn into the `Freeleech75` indexer flag, to score aMule above torrents (see [usage](docs/en/usage.md)) |
 | `AMULARR_FILE_TYPE` | `Video` | ed2k type filter for TV/movie searches (`any` disables) |
 | `AMULARR_VIDEO_EXTENSIONS` | mkv avi mp4 ... | Extensions accepted for TV/movie categories |
 | `AMULARR_INCOMING_DIR` | aMule's own path | Incoming directory as Sonarr/Radarr see it (`content_path`) |

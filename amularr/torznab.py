@@ -195,8 +195,8 @@ def results_xml(items: list[Item], config: Config, offset: int, total: int) -> b
             ("leechers", "0"),
             ("infohash", ed2k_to_btih(r.hash)),
             ("magneturl", magnet),
-            ("downloadvolumefactor", "0"),
-            ("uploadvolumefactor", "0"),
+            ("downloadvolumefactor", config.download_volume_factor),
+            ("uploadvolumefactor", config.upload_volume_factor),
         ]
         for name, value in attrs:
             ET.SubElement(node, f"{{{TORZNAB_NS}}}attr", name=name, value=value)

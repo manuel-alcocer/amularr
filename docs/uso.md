@@ -88,7 +88,37 @@ series/películas, no con los indexers.
 
 Por API es `downloadClientId` en `/api/v3/indexer/<id>`.
 
-## 4. Búsquedas de pendientes (capturas automáticas)
+## 4. Preferir aMule frente a los torrents
+
+El orden de decisión de Sonarr/Radarr es calidad, puntuación de *custom
+formats*, protocolo, (en Sonarr) número de episodios, prioridad del indexer,
+semillas. La prioridad del indexer solo desempata: un pack de temporada por
+torrent gana siempre a los episodios sueltos de aMule, y ninguna condición
+de *custom format* distingue por indexer. Sí distinguen por **indexer
+flag**, y amularr envía en cada resultado `downloadvolumefactor=0.25`, que
+Sonarr/Radarr convierten en el flag `Freeleech75` (los trackers públicos
+envían `0`, es decir `Freeleech`, así que el flag es exclusivo de amularr).
+
+En Sonarr y Radarr, *Settings → Custom Formats → +*:
+
+| Campo | Valor |
+| --- | --- |
+| Name | `aMule` |
+| Condition | *Indexer Flag* = `Freeleech75` (Radarr: `G Freeleech75`), *Required* |
+
+Y en cada perfil de calidad dale una puntuación alta (por ejemplo `500`).
+Con eso una release de aMule de la misma calidad gana a cualquier torrent,
+packs incluidos. Ojo: si usas la puntuación mínima del perfil para exigir
+un idioma, esos +500 la superan por sí solos; rechaza el idioma no deseado
+con un formato negativo, no con el mínimo. Sube también *Minimum Custom Format Score Increment*
+(`minUpgradeFormatScore`) por encima de esa puntuación, o Sonarr/Radarr
+volverán a descargar desde aMule lo que ya tenías por torrent.
+
+`AMULARR_DOWNLOAD_VOLUME_FACTOR` y `AMULARR_UPLOAD_VOLUME_FACTOR` cambian
+los valores enviados (`0.5` → `Halfleech`, `2` de subida → `DoubleUpload`)
+si un tracker privado tuyo ya usa `Freeleech75`.
+
+## 5. Búsquedas de pendientes (capturas automáticas)
 
 ed2k/Kad no tiene un feed de "novedades", así que la respuesta RSS por sí
 sola nunca puede sacar a la luz un capítulo recién emitido, y Sonarr/Radarr
@@ -127,7 +157,7 @@ wanted tv: Lanterns S01E05 -> 6 results (Lanterns S01E05, Lanterns 1x05, Lintern
 wanted tv: 1 items wanted, 1 searched now (6 hits), 0 postponed
 ```
 
-## 5. Verlo funcionar
+## 6. Verlo funcionar
 
 - `GET /health` → versión de aMule, estado de conexión ed2k/Kad, `ok`.
 - Logs: cada petición Torznab con su consulta, categorías y número de

@@ -86,7 +86,37 @@ this: they match series/movie tags, not indexers.
 
 With the API, that is `downloadClientId` on `/api/v3/indexer/<id>`.
 
-## 4. Wanted-list searches (automatic grabs)
+## 4. Preferring aMule over torrents
+
+Sonarr/Radarr decide in this order: quality, custom-format score, protocol,
+(Sonarr) episode count, indexer priority, seeders. Indexer priority only
+breaks ties: a torrent season pack always beats single episodes from aMule,
+and no custom-format condition can tell indexers apart. **Indexer flags**
+can, and amularr sends `downloadvolumefactor=0.25` with every result, which
+Sonarr/Radarr turn into the `Freeleech75` flag (public trackers send `0`,
+i.e. `Freeleech`, so the flag is unique to amularr).
+
+In Sonarr and Radarr, *Settings → Custom Formats → +*:
+
+| Field | Value |
+| --- | --- |
+| Name | `aMule` |
+| Condition | *Indexer Flag* = `Freeleech75` (Radarr: `G Freeleech75`), *Required* |
+
+Then give it a high score in every quality profile (say `500`). An aMule
+release of the same quality now beats any torrent, packs included. Note
+that if the profile's minimum score is what enforces your language, those
++500 pass it on their own; reject unwanted languages with a negative format
+instead of relying on the minimum. Raise
+*Minimum Custom Format Score Increment* (`minUpgradeFormatScore`) above that
+score too, or Sonarr/Radarr will re-download from aMule what you already got
+through torrents.
+
+`AMULARR_DOWNLOAD_VOLUME_FACTOR` and `AMULARR_UPLOAD_VOLUME_FACTOR` change
+the values sent (`0.5` → `Halfleech`, upload `2` → `DoubleUpload`) if a
+private tracker of yours already uses `Freeleech75`.
+
+## 5. Wanted-list searches (automatic grabs)
 
 ed2k/Kad has no "recent releases" feed, so the RSS answer alone can never
 surface a freshly aired episode, and Sonarr/Radarr only grab automatically
@@ -123,7 +153,7 @@ wanted tv: Lanterns S01E05 -> 6 results (Lanterns S01E05, Lanterns 1x05, Lintern
 wanted tv: 1 items wanted, 1 searched now (6 hits), 0 postponed
 ```
 
-## 5. Watching it work
+## 6. Watching it work
 
 - `GET /health` → aMule version, ed2k/Kad connection state, `ok`.
 - Logs: every Torznab request with its query, categories and result count;
