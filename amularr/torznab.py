@@ -72,7 +72,9 @@ def build_queries(kind: str, q: str, season: str | None, ep: str | None, year: s
         if s is not None and e is not None:
             return [f"{q} S{s:02d}E{e:02d}", f"{q} {s}x{e:02d}"]
         if s is not None:
-            return [f"{q} S{s:02d}", f"{q} temporada {s}"]
+            # "Nx" matches the "1x01" naming of Spanish per-episode releases
+            # (a season search for "temporada N" found nothing on ed2k).
+            return [f"{q} S{s:02d}", f"{q} {s}x"]
         return [q]
     if kind == "movie":
         if year and year.isdigit():

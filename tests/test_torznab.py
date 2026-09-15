@@ -40,7 +40,7 @@ def test_apikey_enforced():
 
 def test_build_queries():
     assert torznab.build_queries("tvsearch", "Dark", "3", "3", None) == ["Dark S03E03", "Dark 3x03"]
-    assert torznab.build_queries("tvsearch", "Dark", "3", None, None) == ["Dark S03", "Dark temporada 3"]
+    assert torznab.build_queries("tvsearch", "Dark", "3", None, None) == ["Dark S03", "Dark 3x"]
     assert torznab.build_queries("tvsearch", "The Office (US)", None, None, None) == ["The Office US"]
     assert torznab.build_queries("movie", "Blade Runner", None, None, "1982") == ["Blade Runner 1982", "Blade Runner"]
     assert torznab.build_queries("search", "  ", None, None, None) == []
@@ -78,6 +78,18 @@ def test_search_uses_cache_for_repeated_queries():
     api.handle({"t": "search", "q": "foo"})
     api.handle({"t": "search", "q": "foo"})
     assert len(ec.searches) == 1
+
+
+def test_empty_answers_are_cached_only_briefly(monkeypatch):
+    from amularr import search as search_module
+
+    api, ec = make_api([])
+    api.handle({"t": "search", "q": "foo"})
+    api.handle({"t": "search", "q": "foo"})
+    assert len(ec.searches) == 1  # within EMPTY_CACHE_TTL the empty answer is reused
+    monkeypatch.setattr(search_module, "EMPTY_CACHE_TTL", 0.0)
+    api.handle({"t": "search", "q": "foo"})
+    assert len(ec.searches) == 2  # an empty answer expires long before search_cache_ttl
 
 
 def test_rss_request_without_query_returns_recent_results():

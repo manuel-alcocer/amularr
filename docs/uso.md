@@ -38,7 +38,7 @@ Las búsquedas se traducen así:
 | Petición de Prowlarr | Búsquedas ed2k |
 | --- | --- |
 | `t=tvsearch&q=Dark&season=3&ep=3` | `Dark S03E03`, `Dark 3x03` |
-| `t=tvsearch&q=Dark&season=3` | `Dark S03`, `Dark temporada 3` |
+| `t=tvsearch&q=Dark&season=3` | `Dark S03`, `Dark 3x` |
 | `t=movie&q=Blade Runner&year=1982` | `Blade Runner 1982`, `Blade Runner` |
 | `t=search&q=...` | la consulta tal cual |
 

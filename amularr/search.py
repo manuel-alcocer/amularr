@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 PROGRESS_DONE = 100
 PROGRESS_IDLE = 0xFFFF
 FIRST_SEEN_RETENTION = 30 * 86400  # seconds a hash keeps its first-seen date
+EMPTY_CACHE_TTL = 60.0  # an empty answer (server timeout, refused search) is retried much sooner
 
 
 @dataclass
@@ -98,7 +99,8 @@ class SearchService:
         entry = self._cache.get(key)
         if entry is None:
             return None
-        if time.monotonic() - entry.timestamp > self.config.search_cache_ttl:
+        ttl = min(self.config.search_cache_ttl, EMPTY_CACHE_TTL) if not entry.results else self.config.search_cache_ttl
+        if time.monotonic() - entry.timestamp > ttl:
             return None
         return entry.results
 
